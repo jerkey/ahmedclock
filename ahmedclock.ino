@@ -9,7 +9,8 @@
 #define TORQUE_AMPS     2.0 // how many amps at which we think the screw is tight
 #define MOTOR1PWM       192
 #define MOTOR2PWM       192
-#define MODE1TIMEOUT    2000 // how many milliseconds to do mode 1
+#define MODE1MINTIME    2000 // how many milliseconds minimum for mode 1
+#define MODE1TIMEOUT    7000 // how many milliseconds to do mode 1 before error timeout
 #define MODE2TIMEOUT    5000 // how many milliseconds to do mode 2
 #define PRINTRATE       500 // how often to printInfo()
 #define THERMISTOR      A3 // has a 4.7KΩ pullup resistor to Vcc
@@ -59,6 +60,10 @@ void loop() {
   if (mode==1) {
     digitalWrite(DIR1,LOW); // tighten
     if (ENABLE1_IS_PWM==0) analogWrite(ENABLE1,MOTOR1PWM);
+    if (millis() - mode1time > MODE1TIMEOUT) { // we took too long, restart the sequence
+      digitalWrite(ENABLE1,LOW);
+      mode = 0;
+    }
   }
 
   if ((mode == 2) && (millis() - mode2time < MODE2TIMEOUT)) {
@@ -76,7 +81,7 @@ void loop() {
     mode = 1; // detect tripwire
     mode1time = millis(); // start the timer for mode1
   }
-  if ((mode==1) && (isense1 > TORQUE_AMPS) && (millis() - mode1time > MODE1TIMEOUT)) {
+  if ((mode==1) && (isense1 > TORQUE_AMPS) && (millis() - mode1time > MODE1MINTIME)) {
     Serial.println("TIGHT!   XXXXXX XXXXXXXXXXXX     X          XXXXXXXXX       XXXXXXX     XXXXXXXXXXX   XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
     digitalWrite(ENABLE1,LOW); // turn off screwmotor
     Serial.print(isense1,2);
